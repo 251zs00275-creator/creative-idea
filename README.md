@@ -1,5 +1,12 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## 開発に参加する前に
+
+このプロジェクトでの開発（ブランチ運用・コミット・PRのルール）は以下を参照してください:
+
+- [Git運用ルール (docs/git-workflow.md)](./docs/git-workflow.md) — ブランチ戦略・コミット規約・PRルールの定義
+- [Git運用マニュアル (docs/git-workflow-manual.md)](./docs/git-workflow-manual.md) — 日々の作業手順（コマンド付き手順書）
+
 ## Getting Started
 
 First, run the development server:
