@@ -16,6 +16,18 @@ create table if not exists public.users (
   created_at      timestamptz default now()
 );
 
+-- 通知設定（既存テーブルへの追加カラム。既存DBにも安全に再適用可能）
+alter table public.users
+  add column if not exists notification_enabled boolean not null default true;
+alter table public.users
+  add column if not exists notification_threshold_days int not null default 7;
+
+alter table public.users
+  drop constraint if exists users_notification_threshold_days_check;
+alter table public.users
+  add constraint users_notification_threshold_days_check
+    check (notification_threshold_days > 0);
+
 alter table public.users enable row level security;
 
 create policy "Users can read own profile"
