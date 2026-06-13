@@ -13,6 +13,8 @@ export interface User {
   id: string
   email: string
   display_name: string | null
+  notification_enabled: boolean
+  notification_threshold_days: number
   created_at: string
 }
 
