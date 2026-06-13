@@ -13,7 +13,6 @@ create table if not exists public.users (
   id              uuid primary key references auth.users(id) on delete cascade,
   email           text not null,
   display_name    text,
-  slack_user_id   text unique,
   created_at      timestamptz default now()
 );
 
@@ -59,7 +58,6 @@ create table if not exists public.works (
   memo            text,
   framework       text check (framework in ('vts','orid','element','self')),
   ws_answers      jsonb,
-  source          text not null default 'web' check (source in ('web','slack')),
   created_at      timestamptz default now()
 );
 
@@ -123,23 +121,4 @@ alter table public.analyses enable row level security;
 
 create policy "Users can CRUD own analyses"
   on public.analyses for all
-  using (auth.uid() = user_id);
-
--- ============================================================
--- slack_connections
--- ============================================================
-create table if not exists public.slack_connections (
-  id                    uuid primary key default gen_random_uuid(),
-  user_id               uuid not null references public.users(id) on delete cascade,
-  slack_workspace_id    text not null,
-  slack_channel_id      text not null,
-  bot_token             text not null,
-  created_at            timestamptz default now(),
-  unique (user_id, slack_workspace_id)
-);
-
-alter table public.slack_connections enable row level security;
-
-create policy "Users can CRUD own slack connections"
-  on public.slack_connections for all
   using (auth.uid() = user_id);

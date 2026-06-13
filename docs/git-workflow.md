@@ -89,7 +89,7 @@
 
 変更の影響範囲を括弧内に書く。本プロジェクトでは概ね以下を使用:
 
-`archive` / `analysis` / `auth` / `worksheet` / `slack` / `api` / `supabase` / `ui` / `ai` など
+`archive` / `analysis` / `auth` / `worksheet` / `export` / `notification` / `api` / `supabase` / `ui` / `ai` など
 
 例: `feat(archive): 作品一覧にカテゴリフィルタを追加`
 

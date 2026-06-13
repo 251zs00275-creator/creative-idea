@@ -68,7 +68,6 @@ export async function POST(req: NextRequest) {
       memo: memo || null,
       framework: framework || null,
       ws_answers: ws_answers || null,
-      source: 'web',
     })
     .select()
     .single()
