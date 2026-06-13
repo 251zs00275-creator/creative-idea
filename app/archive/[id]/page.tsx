@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Work } from '@/types'
 import { CATEGORY_LABELS, FRAMEWORKS } from '@/lib/frameworks'
+import { buildSnsSummary } from '@/lib/export'
 import WorksheetForm from '@/components/worksheets/WorksheetForm'
 
 export default function WorkDetailPage() {
@@ -15,6 +16,7 @@ export default function WorkDetailPage() {
   const [work, setWork] = useState<Work | null>(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     fetch(`/api/works/${id}`)
@@ -28,6 +30,13 @@ export default function WorkDetailPage() {
     setDeleting(true)
     await fetch(`/api/works/${id}`, { method: 'DELETE' })
     router.push('/archive')
+  }
+
+  const handleCopySnsText = async () => {
+    if (!work) return
+    await navigator.clipboard.writeText(buildSnsSummary(work))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   if (loading) {
@@ -126,6 +135,12 @@ export default function WorkDetailPage() {
         >
           PDF
         </a>
+        <button
+          onClick={handleCopySnsText}
+          className="text-sm text-neutral-600 hover:text-neutral-900 px-3 py-1.5 rounded-lg hover:bg-neutral-100 transition"
+        >
+          {copied ? 'コピーしました' : 'SNS用テキストをコピー'}
+        </button>
         <button
           onClick={handleDelete}
           disabled={deleting}
