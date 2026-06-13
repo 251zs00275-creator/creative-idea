@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Category, FrameworkKey, WorksheetAnswers } from '@/types'
 import { CATEGORY_LABELS, FRAMEWORK_LIST, getFramework } from '@/lib/frameworks'
+import { uploadThumbnail, ThumbnailUploadError } from '@/lib/upload'
 import WorksheetForm from '@/components/worksheets/WorksheetForm'
 
 export default function NewWorkPage() {
@@ -19,6 +20,8 @@ export default function NewWorkPage() {
   const [framework, setFramework] = useState<FrameworkKey | null>(null)
   const [wsAnswers, setWsAnswers] = useState<WorksheetAnswers>({})
   const [ogpLoading, setOgpLoading] = useState(false)
+  const [thumbnailUploading, setThumbnailUploading] = useState(false)
+  const [thumbnailError, setThumbnailError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,6 +37,24 @@ export default function NewWorkPage() {
       }
     } finally {
       setOgpLoading(false)
+    }
+  }
+
+  const handleThumbnailFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setThumbnailUploading(true)
+    setThumbnailError(null)
+
+    try {
+      const publicUrl = await uploadThumbnail(file)
+      setThumbnailUrl(publicUrl)
+    } catch (err) {
+      setThumbnailError(err instanceof ThumbnailUploadError ? err.message : '画像のアップロードに失敗しました')
+    } finally {
+      setThumbnailUploading(false)
+      e.target.value = ''
     }
   }
 
@@ -84,6 +105,20 @@ export default function NewWorkPage() {
           {thumbnailUrl && (
             <img src={thumbnailUrl} alt="thumbnail" className="mt-2 h-24 rounded object-cover" />
           )}
+        </div>
+
+        {/* Thumbnail upload */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium">サムネイル画像（任意）</label>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onChange={handleThumbnailFileChange}
+            disabled={thumbnailUploading}
+            className="block w-full text-sm text-neutral-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-neutral-100 file:text-neutral-700 hover:file:bg-neutral-200 disabled:opacity-50"
+          />
+          {thumbnailUploading && <p className="text-xs text-neutral-400">アップロード中...</p>}
+          {thumbnailError && <p className="text-xs text-red-500">{thumbnailError}</p>}
         </div>
 
         {/* Title */}

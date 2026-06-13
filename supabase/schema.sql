@@ -143,3 +143,37 @@ alter table public.analyses enable row level security;
 create policy "Users can CRUD own analyses"
   on public.analyses for all
   using (auth.uid() = user_id);
+
+-- ============================================================
+-- storage: work thumbnails
+-- ============================================================
+insert into storage.buckets (id, name, public)
+values ('thumbnails', 'thumbnails', true)
+on conflict (id) do nothing;
+
+-- Files are stored under "<user_id>/<filename>" so ownership can be
+-- checked via the first path segment.
+create policy "Users can upload own thumbnails"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'thumbnails'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Users can update own thumbnails"
+  on storage.objects for update
+  using (
+    bucket_id = 'thumbnails'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Users can delete own thumbnails"
+  on storage.objects for delete
+  using (
+    bucket_id = 'thumbnails'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Public can view thumbnails"
+  on storage.objects for select
+  using (bucket_id = 'thumbnails');
