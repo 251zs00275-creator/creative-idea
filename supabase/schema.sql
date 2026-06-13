@@ -6,6 +6,9 @@
 -- Enable UUID extension
 create extension if not exists "pgcrypto";
 
+-- Enable trigram extension (for ilike/substring search acceleration)
+create extension if not exists "pg_trgm";
+
 -- ============================================================
 -- users
 -- ============================================================
@@ -87,9 +90,15 @@ create index if not exists works_category
 create index if not exists works_framework
   on public.works (user_id, framework);
 
--- Full-text search
-create index if not exists works_fts
-  on public.works using gin(to_tsvector('japanese', coalesce(title,'') || ' ' || coalesce(memo,'')));
+-- Keyword search acceleration (ilike '%...%' on title/memo)
+-- Standard PostgreSQL FTS configs ('simple'/'english') don't segment
+-- Japanese text well, and 'japanese' is not available by default.
+-- pg_trgm GIN indexes speed up trigram-based ilike substring matches
+-- (incl. Japanese) without changing search semantics.
+create index if not exists works_title_trgm
+  on public.works using gin (title gin_trgm_ops);
+create index if not exists works_memo_trgm
+  on public.works using gin (memo gin_trgm_ops);
 
 -- ============================================================
 -- ai_chat_logs
