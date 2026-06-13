@@ -112,7 +112,20 @@ export default function WorkDetailPage() {
       )}
 
       {/* Actions */}
-      <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100">
+      <div className="flex justify-end items-center gap-2 pt-4 border-t border-neutral-100">
+        <span className="text-xs text-neutral-400 mr-auto">エクスポート:</span>
+        <a
+          href={`/api/works/${id}/export?format=md`}
+          className="text-sm text-neutral-600 hover:text-neutral-900 px-3 py-1.5 rounded-lg hover:bg-neutral-100 transition"
+        >
+          Markdown
+        </a>
+        <a
+          href={`/api/works/${id}/export?format=pdf`}
+          className="text-sm text-neutral-600 hover:text-neutral-900 px-3 py-1.5 rounded-lg hover:bg-neutral-100 transition"
+        >
+          PDF
+        </a>
         <button
           onClick={handleDelete}
           disabled={deleting}
