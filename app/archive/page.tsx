@@ -2,36 +2,60 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Work, Category, FrameworkKey } from '@/types'
+import { Work } from '@/types'
 import { CATEGORY_LABELS, FRAMEWORK_LIST } from '@/lib/frameworks'
 import WorkCard from '@/components/ui/WorkCard'
 
 const ALL = '__all__'
 
-export default function ArchivePage() {
+function ArchiveContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [works, setWorks] = useState<Work[]>([])
   const [loading, setLoading] = useState(true)
-  const [category, setCategory] = useState(ALL)
-  const [framework, setFramework] = useState(ALL)
-  const [q, setQ] = useState('')
+  const [category, setCategory] = useState(searchParams.get('category') || ALL)
+  const [framework, setFramework] = useState(searchParams.get('framework') || ALL)
+  const [q, setQ] = useState(searchParams.get('q') || '')
 
+  // Sync filter/search state to the URL query string
   useEffect(() => {
-    fetchWorks()
-  }, [category, framework, q])
-
-  async function fetchWorks() {
-    setLoading(true)
     const params = new URLSearchParams()
     if (category !== ALL) params.set('category', category)
     if (framework !== ALL) params.set('framework', framework)
     if (q) params.set('q', q)
 
-    const res = await fetch(`/api/works?${params}`)
-    if (res.ok) setWorks(await res.json())
-    setLoading(false)
-  }
+    const query = params.toString()
+    router.replace(query ? `/archive?${query}` : '/archive', { scroll: false })
+  }, [category, framework, q, router])
+
+  useEffect(() => {
+    let isCurrent = true
+
+    async function fetchWorks() {
+      setLoading(true)
+      const params = new URLSearchParams()
+      if (category !== ALL) params.set('category', category)
+      if (framework !== ALL) params.set('framework', framework)
+      if (q) params.set('q', q)
+
+      const res = await fetch(`/api/works?${params}`)
+      const json = res.ok ? await res.json() : []
+
+      if (!isCurrent) return
+      setWorks(json)
+      setLoading(false)
+    }
+
+    fetchWorks()
+
+    return () => {
+      isCurrent = false
+    }
+  }, [category, framework, q])
 
   return (
     <div className="space-y-6">
@@ -100,5 +124,13 @@ export default function ArchivePage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function ArchivePage() {
+  return (
+    <Suspense fallback={<div className="text-center py-20 text-neutral-400 text-sm">読み込み中...</div>}>
+      <ArchiveContent />
+    </Suspense>
   )
 }

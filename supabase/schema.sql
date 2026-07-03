@@ -6,6 +6,9 @@
 -- Enable UUID extension
 create extension if not exists "pgcrypto";
 
+-- Enable trigram extension (for ilike/substring search acceleration)
+create extension if not exists "pg_trgm";
+
 -- ============================================================
 -- users
 -- ============================================================
@@ -13,9 +16,20 @@ create table if not exists public.users (
   id              uuid primary key references auth.users(id) on delete cascade,
   email           text not null,
   display_name    text,
-  slack_user_id   text unique,
   created_at      timestamptz default now()
 );
+
+-- 通知設定（既存テーブルへの追加カラム。既存DBにも安全に再適用可能）
+alter table public.users
+  add column if not exists notification_enabled boolean not null default true;
+alter table public.users
+  add column if not exists notification_threshold_days int not null default 7;
+
+alter table public.users
+  drop constraint if exists users_notification_threshold_days_check;
+alter table public.users
+  add constraint users_notification_threshold_days_check
+    check (notification_threshold_days > 0);
 
 alter table public.users enable row level security;
 
@@ -59,7 +73,6 @@ create table if not exists public.works (
   memo            text,
   framework       text check (framework in ('vts','orid','element','self')),
   ws_answers      jsonb,
-  source          text not null default 'web' check (source in ('web','slack')),
   created_at      timestamptz default now()
 );
 
@@ -77,9 +90,15 @@ create index if not exists works_category
 create index if not exists works_framework
   on public.works (user_id, framework);
 
--- Full-text search
-create index if not exists works_fts
-  on public.works using gin(to_tsvector('japanese', coalesce(title,'') || ' ' || coalesce(memo,'')));
+-- Keyword search acceleration (ilike '%...%' on title/memo)
+-- Standard PostgreSQL FTS configs ('simple'/'english') don't segment
+-- Japanese text well, and 'japanese' is not available by default.
+-- pg_trgm GIN indexes speed up trigram-based ilike substring matches
+-- (incl. Japanese) without changing search semantics.
+create index if not exists works_title_trgm
+  on public.works using gin (title gin_trgm_ops);
+create index if not exists works_memo_trgm
+  on public.works using gin (memo gin_trgm_ops);
 
 -- ============================================================
 -- ai_chat_logs
@@ -126,20 +145,35 @@ create policy "Users can CRUD own analyses"
   using (auth.uid() = user_id);
 
 -- ============================================================
--- slack_connections
+-- storage: work thumbnails
 -- ============================================================
-create table if not exists public.slack_connections (
-  id                    uuid primary key default gen_random_uuid(),
-  user_id               uuid not null references public.users(id) on delete cascade,
-  slack_workspace_id    text not null,
-  slack_channel_id      text not null,
-  bot_token             text not null,
-  created_at            timestamptz default now(),
-  unique (user_id, slack_workspace_id)
-);
+insert into storage.buckets (id, name, public)
+values ('thumbnails', 'thumbnails', true)
+on conflict (id) do nothing;
 
-alter table public.slack_connections enable row level security;
+-- Files are stored under "<user_id>/<filename>" so ownership can be
+-- checked via the first path segment.
+create policy "Users can upload own thumbnails"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'thumbnails'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
 
-create policy "Users can CRUD own slack connections"
-  on public.slack_connections for all
-  using (auth.uid() = user_id);
+create policy "Users can update own thumbnails"
+  on storage.objects for update
+  using (
+    bucket_id = 'thumbnails'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Users can delete own thumbnails"
+  on storage.objects for delete
+  using (
+    bucket_id = 'thumbnails'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Public can view thumbnails"
+  on storage.objects for select
+  using (bucket_id = 'thumbnails');

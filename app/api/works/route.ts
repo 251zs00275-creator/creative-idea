@@ -24,6 +24,8 @@ export async function GET(req: NextRequest) {
   if (category) query = query.eq('category', category)
   if (framework) query = query.eq('framework', framework)
   if (q) {
+    // Substring match on title/memo, accelerated by pg_trgm GIN indexes
+    // (works_title_trgm / works_memo_trgm in supabase/schema.sql).
     query = query.or(
       `title.ilike.%${q}%,memo.ilike.%${q}%`
     )
@@ -68,7 +70,6 @@ export async function POST(req: NextRequest) {
       memo: memo || null,
       framework: framework || null,
       ws_answers: ws_answers || null,
-      source: 'web',
     })
     .select()
     .single()

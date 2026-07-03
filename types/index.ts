@@ -13,7 +13,8 @@ export interface User {
   id: string
   email: string
   display_name: string | null
-  slack_user_id: string | null
+  notification_enabled: boolean
+  notification_threshold_days: number
   created_at: string
 }
 
@@ -27,7 +28,6 @@ export interface Work {
   memo: string | null
   framework: FrameworkKey | null
   ws_answers: WorksheetAnswers | null
-  source: 'web' | 'slack'
   created_at: string
 }
 
@@ -50,15 +50,6 @@ export interface Analysis {
   pattern: string
   keywords: string[]
   works_count: number
-  created_at: string
-}
-
-export interface SlackConnection {
-  id: string
-  user_id: string
-  slack_workspace_id: string
-  slack_channel_id: string
-  bot_token: string
   created_at: string
 }
 
