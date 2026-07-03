@@ -1,12 +1,22 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/', '/login', '/api/']
+// 完全一致で判定するパス（'/' をプレフィックス判定に含めると全パスが
+// マッチしてしまうため、静的パスは exact match、'/api/' のみ prefix 判定にする）
+const PUBLIC_EXACT_PATHS = new Set(['/', '/login'])
+const PUBLIC_PREFIX_PATHS = ['/api/']
+
+function isPublicPath(pathname: string): boolean {
+  return (
+    PUBLIC_EXACT_PATHS.has(pathname) ||
+    PUBLIC_PREFIX_PATHS.some((p) => pathname.startsWith(p))
+  )
+}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
+  const isPublic = isPublicPath(pathname)
 
   let response = NextResponse.next({ request })
 
