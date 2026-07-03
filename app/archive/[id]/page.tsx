@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Work } from '@/types'
+import { Work, WorksheetAnswers } from '@/types'
 import { CATEGORY_LABELS, FRAMEWORKS } from '@/lib/frameworks'
 import { buildSnsSummary } from '@/lib/export'
 import { uploadThumbnail, ThumbnailUploadError } from '@/lib/upload'
@@ -21,6 +21,10 @@ export default function WorkDetailPage() {
   const [copied, setCopied] = useState(false)
   const [thumbnailUploading, setThumbnailUploading] = useState(false)
   const [thumbnailError, setThumbnailError] = useState<string | null>(null)
+  const [editingWorksheet, setEditingWorksheet] = useState(false)
+  const [draftAnswers, setDraftAnswers] = useState<WorksheetAnswers>({})
+  const [savingWorksheet, setSavingWorksheet] = useState(false)
+  const [worksheetError, setWorksheetError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`/api/works/${id}`)
@@ -59,6 +63,39 @@ export default function WorkDetailPage() {
       setThumbnailUploading(false)
       e.target.value = ''
     }
+  }
+
+  const handleStartEditWorksheet = () => {
+    if (!work) return
+    setDraftAnswers(work.ws_answers ?? {})
+    setWorksheetError(null)
+    setEditingWorksheet(true)
+  }
+
+  const handleCancelEditWorksheet = () => {
+    setEditingWorksheet(false)
+    setWorksheetError(null)
+  }
+
+  const handleSaveWorksheet = async () => {
+    setSavingWorksheet(true)
+    setWorksheetError(null)
+
+    const res = await fetch(`/api/works/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ws_answers: draftAnswers }),
+    })
+
+    if (res.ok) {
+      const updated = await res.json()
+      setWork(updated)
+      setEditingWorksheet(false)
+    } else {
+      const data = await res.json().catch(() => null)
+      setWorksheetError(data?.error ?? '保存に失敗しました')
+    }
+    setSavingWorksheet(false)
   }
 
   const handleCopySnsText = async () => {
@@ -158,13 +195,45 @@ export default function WorkDetailPage() {
       )}
 
       {/* Worksheet */}
-      {framework && work.ws_answers && (
-        <WorksheetForm
-          framework={framework}
-          answers={work.ws_answers}
-          onChange={() => {}}
-          readOnly
-        />
+      {framework && (
+        <div className="space-y-3">
+          <WorksheetForm
+            framework={framework}
+            answers={editingWorksheet ? draftAnswers : work.ws_answers ?? {}}
+            onChange={setDraftAnswers}
+            readOnly={!editingWorksheet}
+          />
+
+          {worksheetError && <p className="text-sm text-red-500">{worksheetError}</p>}
+
+          <div className="flex justify-end gap-2">
+            {editingWorksheet ? (
+              <>
+                <button
+                  onClick={handleCancelEditWorksheet}
+                  disabled={savingWorksheet}
+                  className="text-sm border border-neutral-200 rounded-lg px-3 py-1.5 hover:bg-neutral-50 transition disabled:opacity-50"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={handleSaveWorksheet}
+                  disabled={savingWorksheet}
+                  className="text-sm bg-neutral-900 text-white rounded-lg px-3 py-1.5 hover:bg-neutral-700 transition disabled:opacity-50"
+                >
+                  {savingWorksheet ? '保存中...' : '保存'}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleStartEditWorksheet}
+                className="text-sm text-neutral-600 hover:text-neutral-900 px-3 py-1.5 rounded-lg hover:bg-neutral-100 transition"
+              >
+                ワークシートを編集
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Actions */}
