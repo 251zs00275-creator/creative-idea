@@ -4,9 +4,11 @@ export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Category, FrameworkKey, WorksheetAnswers } from '@/types'
 import { CATEGORY_LABELS, FRAMEWORK_LIST, getFramework } from '@/lib/frameworks'
 import { uploadThumbnail, ThumbnailUploadError } from '@/lib/upload'
+import { isSupabaseStorageUrl } from '@/lib/image-host'
 import WorksheetForm from '@/components/worksheets/WorksheetForm'
 
 export default function NewWorkPage() {
@@ -103,7 +105,15 @@ export default function NewWorkPage() {
             {ogpLoading && <span className="text-xs text-neutral-400 self-center">取得中...</span>}
           </div>
           {thumbnailUrl && (
-            <img src={thumbnailUrl} alt="thumbnail" className="mt-2 h-24 rounded object-cover" />
+            <div className="mt-2 relative h-24 w-40 rounded overflow-hidden bg-neutral-100">
+              <Image
+                src={thumbnailUrl}
+                alt="thumbnail"
+                fill
+                className="object-cover"
+                unoptimized={!isSupabaseStorageUrl(thumbnailUrl, process.env.NEXT_PUBLIC_SUPABASE_URL)}
+              />
+            </div>
           )}
         </div>
 

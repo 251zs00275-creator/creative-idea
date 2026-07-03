@@ -17,6 +17,9 @@ function ArchiveContent() {
 
   const [works, setWorks] = useState<Work[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
+  const [page, setPage] = useState(1)
   const [category, setCategory] = useState(searchParams.get('category') || ALL)
   const [framework, setFramework] = useState(searchParams.get('framework') || ALL)
   const [q, setQ] = useState(searchParams.get('q') || '')
@@ -32,30 +35,53 @@ function ArchiveContent() {
     router.replace(query ? `/archive?${query}` : '/archive', { scroll: false })
   }, [category, framework, q, router])
 
+  // フィルタ・検索が変わったら1ページ目から取り直す
   useEffect(() => {
     let isCurrent = true
 
-    async function fetchWorks() {
+    async function fetchFirstPage() {
       setLoading(true)
       const params = new URLSearchParams()
       if (category !== ALL) params.set('category', category)
       if (framework !== ALL) params.set('framework', framework)
       if (q) params.set('q', q)
+      params.set('page', '1')
 
       const res = await fetch(`/api/works?${params}`)
-      const json = res.ok ? await res.json() : []
+      const json = res.ok ? await res.json() : { data: [], hasMore: false }
 
       if (!isCurrent) return
-      setWorks(json)
+      setWorks(json.data ?? [])
+      setHasMore(Boolean(json.hasMore))
+      setPage(1)
       setLoading(false)
     }
 
-    fetchWorks()
+    fetchFirstPage()
 
     return () => {
       isCurrent = false
     }
   }, [category, framework, q])
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true)
+    const nextPage = page + 1
+    const params = new URLSearchParams()
+    if (category !== ALL) params.set('category', category)
+    if (framework !== ALL) params.set('framework', framework)
+    if (q) params.set('q', q)
+    params.set('page', String(nextPage))
+
+    const res = await fetch(`/api/works?${params}`)
+    if (res.ok) {
+      const json = await res.json()
+      setWorks((prev) => [...prev, ...(json.data ?? [])])
+      setHasMore(Boolean(json.hasMore))
+      setPage(nextPage)
+    }
+    setLoadingMore(false)
+  }
 
   return (
     <div className="space-y-6">
@@ -117,11 +143,24 @@ function ArchiveContent() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {works.map((work) => (
-            <WorkCard key={work.id} work={work} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {works.map((work) => (
+              <WorkCard key={work.id} work={work} />
+            ))}
+          </div>
+          {hasMore && (
+            <div className="text-center pt-2">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="text-sm border border-neutral-200 rounded-lg px-4 py-2 hover:bg-neutral-50 transition disabled:opacity-50"
+              >
+                {loadingMore ? '読み込み中...' : 'もっと読み込む'}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

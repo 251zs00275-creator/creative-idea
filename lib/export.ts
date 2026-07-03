@@ -113,8 +113,11 @@ export function buildSnsSummary(work: Work): string {
   const bodyCandidate = work.memo?.trim() || worksheetEntries[0]?.answer || ''
 
   const footer = '#CreativeSenseArchive'
+  const separator = '\n\n'
 
-  const fixedLength = header.length + footer.length + 2 // 改行2つ分
+  // header/body/footerの3パートがjoinされる際、区切り(separator)は
+  // header-body間・body-footer間の2箇所に入るため separator.length * 2
+  const fixedLength = header.length + footer.length + separator.length * 2
   const remaining = SNS_CHAR_LIMIT - fixedLength
 
   let body = bodyCandidate
@@ -124,5 +127,5 @@ export function buildSnsSummary(work: Work): string {
     body = ''
   }
 
-  return [header, body, footer].filter((part) => part.length > 0).join('\n\n')
+  return [header, body, footer].filter((part) => part.length > 0).join(separator)
 }
