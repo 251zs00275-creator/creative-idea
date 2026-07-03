@@ -38,7 +38,14 @@ export async function assertSafeUrl(rawUrl: string): Promise<void> {
     throw new UnsafeUrlError('ローカルホストへのアクセスは許可されていません')
   }
 
-  const literalIp = isIP(hostname) ? hostname : null
+  // WHATWG URL の hostname は IPv6 リテラルを "[::1]" のように
+  // 角括弧付きで返すため、isIP() に渡す前に取り除く
+  const bareHostname =
+    hostname.startsWith('[') && hostname.endsWith(']')
+      ? hostname.slice(1, -1)
+      : hostname
+
+  const literalIp = isIP(bareHostname) ? bareHostname : null
 
   const addresses = literalIp
     ? [literalIp]
