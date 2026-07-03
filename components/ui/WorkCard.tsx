@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Work } from '@/types'
 import { CATEGORY_LABELS, FRAMEWORKS } from '@/lib/frameworks'
+import { isSupabaseStorageUrl } from '@/lib/image-host'
 
 interface Props {
   work: Work
@@ -9,6 +10,9 @@ interface Props {
 
 export default function WorkCard({ work }: Props) {
   const framework = work.framework ? FRAMEWORKS[work.framework] : null
+  const isOptimizable =
+    !!work.thumbnail_url &&
+    isSupabaseStorageUrl(work.thumbnail_url, process.env.NEXT_PUBLIC_SUPABASE_URL)
 
   return (
     <Link
@@ -23,7 +27,7 @@ export default function WorkCard({ work }: Props) {
             alt={work.title}
             fill
             className="object-cover group-hover:scale-105 transition"
-            unoptimized
+            unoptimized={!isOptimizable}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-3xl text-neutral-300">

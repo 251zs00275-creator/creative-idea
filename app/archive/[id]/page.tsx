@@ -9,6 +9,7 @@ import { Work } from '@/types'
 import { CATEGORY_LABELS, FRAMEWORKS } from '@/lib/frameworks'
 import { buildSnsSummary } from '@/lib/export'
 import { uploadThumbnail, ThumbnailUploadError } from '@/lib/upload'
+import { isSupabaseStorageUrl } from '@/lib/image-host'
 import WorksheetForm from '@/components/worksheets/WorksheetForm'
 
 export default function WorkDetailPage() {
@@ -95,7 +96,7 @@ export default function WorkDetailPage() {
             alt={work.title}
             fill
             className="object-cover"
-            unoptimized
+            unoptimized={!isSupabaseStorageUrl(work.thumbnail_url, process.env.NEXT_PUBLIC_SUPABASE_URL)}
           />
         </div>
       )}
