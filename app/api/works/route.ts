@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { workCreateSchema } from '@/lib/validation/work'
 import { dbErrorResponse } from '@/lib/api-response'
+import { buildPaginatedResponse, parsePagination } from '@/lib/pagination'
 
 // GET /api/works — list works for current user
 export async function GET(req: NextRequest) {
@@ -16,10 +17,11 @@ export async function GET(req: NextRequest) {
   const category = searchParams.get('category')
   const framework = searchParams.get('framework')
   const q = searchParams.get('q')
+  const pagination = parsePagination(searchParams)
 
   let query = supabase
     .from('works')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -33,13 +35,13 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  const { data, error } = await query
+  const { data, error, count } = await query.range(pagination.from, pagination.to)
 
   if (error) {
     return dbErrorResponse('GET /api/works', error)
   }
 
-  return NextResponse.json(data)
+  return NextResponse.json(buildPaginatedResponse(data ?? [], count ?? 0, pagination))
 }
 
 // POST /api/works — create a new work

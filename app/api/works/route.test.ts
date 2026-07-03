@@ -8,7 +8,7 @@ vi.mock('@/lib/supabase-server', () => ({
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { GET, POST } from './route'
 
-type QueryResult = { data: unknown; error: { message: string } | null }
+type QueryResult = { data: unknown; error: { message: string } | null; count?: number }
 
 function createQueryBuilderMock(result: QueryResult) {
   const builder: Record<string, unknown> = {}
@@ -19,6 +19,7 @@ function createQueryBuilderMock(result: QueryResult) {
   builder.order = vi.fn(chain)
   builder.or = vi.fn(chain)
   builder.insert = vi.fn(chain)
+  builder.range = vi.fn(chain)
   builder.single = vi.fn(() => Promise.resolve(result))
   // GET /api/works awaits the builder directly (no .single())
   builder.then = (
@@ -51,16 +52,35 @@ describe('GET /api/works', () => {
     expect(res.status).toBe(401)
   })
 
-  test('returns the works list for an authenticated user', async () => {
-    mockSupabase({ id: 'user-1' }, { data: [{ id: 'w1', title: 'テスト' }], error: null })
+  test('returns a paginated envelope for an authenticated user', async () => {
+    mockSupabase(
+      { id: 'user-1' },
+      { data: [{ id: 'w1', title: 'テスト' }], error: null, count: 1 }
+    )
     const res = await GET(new NextRequest('http://localhost/api/works'))
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body).toEqual([{ id: 'w1', title: 'テスト' }])
+    expect(body).toEqual({
+      data: [{ id: 'w1', title: 'テスト' }],
+      page: 1,
+      pageSize: 24,
+      totalCount: 1,
+      hasMore: false,
+    })
+  })
+
+  test('passes page/pageSize query params through to the range() call', async () => {
+    const client = mockSupabase({ id: 'user-1' }, { data: [], error: null, count: 0 })
+    await GET(new NextRequest('http://localhost/api/works?page=2&pageSize=10'))
+    const builder = client.from.mock.results[0].value as { range: ReturnType<typeof vi.fn> }
+    expect(builder.range).toHaveBeenCalledWith(10, 19)
   })
 
   test('returns a generic 500 message without leaking the raw DB error', async () => {
-    mockSupabase({ id: 'user-1' }, { data: null, error: { message: 'relation "works" does not exist' } })
+    mockSupabase(
+      { id: 'user-1' },
+      { data: null, error: { message: 'relation "works" does not exist' } }
+    )
     const res = await GET(new NextRequest('http://localhost/api/works'))
     expect(res.status).toBe(500)
     const body = await res.json()
