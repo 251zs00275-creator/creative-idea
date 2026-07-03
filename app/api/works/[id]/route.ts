@@ -53,7 +53,12 @@ export async function PATCH(
     )
   }
 
-  const updates = parsed.data
+  // 例えば {"url": ""} は preprocess で undefined に正規化されるため、
+  // キーの有無ではなく値がundefinedでないかで「更新項目なし」を判定する
+  // (でなければ Object.keys({url: undefined}) はlength 1になり素通りしてしまう)
+  const updates = Object.fromEntries(
+    Object.entries(parsed.data).filter(([, value]) => value !== undefined)
+  )
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(

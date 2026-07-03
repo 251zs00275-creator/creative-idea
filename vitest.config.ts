@@ -12,7 +12,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['lib/**', 'app/api/**'],
+      include: ['lib/**', 'app/api/**', 'proxy.ts'],
       exclude: ['lib/pdf-document.tsx'],
     },
   },

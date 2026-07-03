@@ -85,6 +85,14 @@ describe('PATCH /api/works/[id]', () => {
     expect(res.status).toBe(400)
   })
 
+  test('returns 400 when every field normalizes to undefined (e.g. blank url)', async () => {
+    // url: '' is preprocessed to undefined by workUpdateSchema, so this must
+    // still be rejected as "nothing to update" rather than silently no-op-succeeding
+    mockSupabase({ id: 'user-1' }, { data: null, error: null })
+    const res = await PATCH(patchRequest({ url: '' }), { params })
+    expect(res.status).toBe(400)
+  })
+
   test('returns 400 when an updated field violates validation (invalid category)', async () => {
     mockSupabase({ id: 'user-1' }, { data: null, error: null })
     const res = await PATCH(patchRequest({ category: 'not-real' }), { params })
