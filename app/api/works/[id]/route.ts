@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { workUpdateSchema } from '@/lib/validation/work'
+import { dbErrorResponse } from '@/lib/api-response'
 
 // GET /api/works/[id]
 export async function GET(
@@ -41,12 +43,23 @@ export async function PATCH(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const body = await req.json()
-  const allowedFields = ['title', 'category', 'url', 'thumbnail_url', 'memo', 'framework', 'ws_answers']
-  const updates: Record<string, unknown> = {}
+  const body = await req.json().catch(() => null)
+  const parsed = workUpdateSchema.safeParse(body)
 
-  for (const key of allowedFields) {
-    if (key in body) updates[key] = body[key]
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? '入力内容が不正です' },
+      { status: 400 }
+    )
+  }
+
+  const updates = parsed.data
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json(
+      { error: '更新する項目がありません' },
+      { status: 400 }
+    )
   }
 
   const { data, error } = await supabase
@@ -58,7 +71,7 @@ export async function PATCH(
     .single()
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return dbErrorResponse('PATCH /api/works/[id]', error)
   }
 
   return NextResponse.json(data)
@@ -84,7 +97,7 @@ export async function DELETE(
     .eq('user_id', user.id)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return dbErrorResponse('DELETE /api/works/[id]', error)
   }
 
   return new NextResponse(null, { status: 204 })
